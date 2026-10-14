@@ -64,7 +64,13 @@ After changing environment variables, restart the API. Use model IDs enabled for
 
 ## Deployment
 
-Deploy `client` as a static Vite site and `server` as a Node.js web service. Configure these values in the hosting provider's environment settings:
+### Deploy to Render
+
+The included `render.yaml` deploys the Vite client and Express API together as one Node web service. In Render, create a Blueprint from the GitHub repository and add at least one provider API key when prompted. Render builds the client, serves it from the API service, and checks `/api/health`.
+
+The free Render plan may sleep when idle, which can make the first request take longer. Choose a paid plan for an always-on portfolio demo. Render Blueprints support configuring services and environment variables from the repository's YAML file ([Blueprint reference](https://render.com/docs/blueprint-spec)).
+
+For a separate client and API deployment, configure these values in the hosting provider's environment settings:
 
 | Variable | Where | Purpose |
 | --- | --- | --- |

@@ -4,8 +4,12 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = express();
+const serverDir = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(serverDir, "../client/dist");
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
 const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
@@ -199,6 +203,12 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     clearTimeout(timeout);
     if (!res.writableEnded) res.end();
   }
+});
+
+app.use(express.static(clientDist));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  return res.sendFile(path.join(clientDist, "index.html"));
 });
 
 app.use((err, _req, res, _next) => {

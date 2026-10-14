@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import "./App.css";
 
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "")).replace(/\/$/, "");
 
 const starterPrompts = [
   { icon: Code2, title: "Help me write code", text: "Explain a JavaScript function with a simple example." },
@@ -179,7 +179,7 @@ function App() {
           <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
           <div className="mobile-brand"><VeyroMark /></div>
           <div className="topbar-context"><span className="context-dot" /> AI Assistant <span className="context-separator">/</span> <span className="context-muted">New conversation</span></div>
-          <div className="topbar-right"><span className={`connection-indicator ${apiStatus}`} /><span className="connection-text">{apiStatus === "checking" ? "Connecting" : apiStatus === "online" ? "API connected" : "API offline"}</span><button className="top-new-chat" onClick={startNewChat}><Plus size={15} /><span>New chat</span></button></div>
+          <div className="topbar-right">{import.meta.env.DEV && <><span className={`connection-indicator ${apiStatus}`} /><span className="connection-text">{apiStatus === "checking" ? "Connecting" : apiStatus === "online" ? "API connected" : "API offline"}</span></>}<button className="top-new-chat" onClick={startNewChat}><Plus size={15} /><span>New chat</span></button></div>
         </header>
 
         <section className={`conversation ${messages.length ? "conversation-active" : ""}`}>
@@ -201,16 +201,18 @@ function App() {
             </div>
           ) : (
             <div className="message-list">
-              {messages.map((message, index) => (
-                <article className={`message-row ${message.role}`} key={`${index}-${message.role}`}>
-                  {message.role === "assistant" ? <div className="assistant-avatar"><VeyroMark compact /></div> : <div className="user-avatar">Y</div>}
-                  <div className="message-body">
-                    <div className="message-author">{message.role === "assistant" ? "Veyro" : "You"}</div>
-                    <div className="message-content">{message.content}</div>
-                  </div>
-                </article>
-              ))}
-              {loading && <article className="message-row assistant"><div className="assistant-avatar"><VeyroMark compact /></div><div className="message-body"><div className="message-author">Veyro</div><div className="typing-indicator"><span /><span /><span /></div></div></article>}
+              {messages.map((message, index) => {
+                if (loading && message.role === "assistant" && !message.content) return null;
+                return (
+                  <article className={`message-row ${message.role}`} key={`${index}-${message.role}`}>
+                    <div className="message-body">
+                      <div className="message-author">{message.role === "assistant" ? "Veyro" : "You"}</div>
+                      <div className="message-content">{message.content}</div>
+                    </div>
+                  </article>
+                );
+              })}
+              {loading && (messages[messages.length - 1]?.role !== "assistant" || !messages[messages.length - 1]?.content) && <article className="message-row assistant" role="status" aria-label="Veyro is thinking"><div className="assistant-avatar thinking-avatar" aria-hidden="true"><span className="thinking-spinner" /></div><div className="message-body"><div className="message-author">Veyro is thinking</div><div className="typing-indicator"><span /><span /><span /></div></div></article>}
               <div ref={endRef} />
             </div>
           )}

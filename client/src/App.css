@@ -78,7 +78,8 @@
 .composer-area { width: min(760px, 100%); margin: 0 auto; padding: 0 24px 15px; }
 .composer { border: 1px solid rgba(167,139,250,.19); border-radius: 14px; padding: 13px 13px 10px 16px; background: rgba(26,25,37,.85); box-shadow: 0 10px 40px rgba(0,0,0,.13), 0 0 30px rgba(139,92,246,.025); transition: border-color .2s; }
 .composer:focus-within { border-color: rgba(167,139,250,.42); }
-.composer textarea { display: block; width: 100%; min-height: 28px; max-height: 160px; resize: vertical; color: #f1effa; border: 0; outline: 0; background: transparent; font-size: 15px; line-height: 1.6; padding: 2px 0 7px; }
+.composer textarea { display: block; width: 100%; min-height: 28px; max-height: 160px; resize: none; color: #f1effa; border: 0; outline: 0; background: transparent; font-size: 15px; line-height: 1.6; padding: 2px 0 7px; }
+.composer textarea:focus-visible { outline: none; outline-offset: 0; }
 .composer textarea::placeholder { color: #777489; }
 .composer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .composer-hint { font-size: 9px; color: #6f6c82; }
@@ -93,7 +94,14 @@
 .conversation-active { justify-content: center; }
 .message-list { width: min(760px, 100%); padding: 35px 24px 50px; }
 .message-row { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 27px; }
+.message-row.user { justify-content: flex-end; }
+.message-row.user .user-avatar { display: none; }
+.message-row.user .message-body { flex: 0 1 auto; max-width: min(80%, 600px); }
+.message-row.user .message-author { text-align: right; }
+.message-row.user .message-content { width: fit-content; max-width: 100%; margin-left: auto; padding: 10px 14px; border: 1px solid rgba(167,139,250,.12); border-radius: 14px 4px 14px 14px; background: rgba(139,92,246,.12); }
 .assistant-avatar { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 10px; background: rgba(139,92,246,.12); border: 1px solid rgba(167,139,250,.12); }
+.thinking-avatar { border-radius: 50%; background: rgba(139,92,246,.08); }
+.thinking-spinner { width: 15px; height: 15px; border: 2px solid rgba(167,139,250,.28); border-top-color: #a78bfa; border-radius: 50%; animation: spin .75s linear infinite; }
 .assistant-avatar .brand-mark { width: 25px; height: 25px; border: 0; background: transparent; }
 .assistant-avatar .brand-mark svg { width: 23px; height: 23px; }
 .user-avatar { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 10px; background: #272638; color: #c9c0ff; font-size: 12px; font-weight: 600; }
