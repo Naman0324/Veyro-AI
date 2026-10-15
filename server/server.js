@@ -24,10 +24,42 @@ const timeoutMs = Math.max(10_000, Number(process.env.AI_TIMEOUT_MS) || (process
 const dailyChatLimit = Math.max(1, Number(process.env.DAILY_CHAT_LIMIT) || 25);
 const PgSession = connectPgSimple(session);
 
+function readCompatibleProviders() {
+  if (!process.env.OPENAI_COMPATIBLE_PROVIDERS) return [];
+  try {
+    const providers = JSON.parse(process.env.OPENAI_COMPATIBLE_PROVIDERS);
+    if (!Array.isArray(providers)) throw new Error("Expected a JSON array.");
+    const reservedIds = new Set(["gemini", "openai", "agentrouter", "anthropic"]);
+    return providers.filter((provider) => {
+      const valid = provider && typeof provider.id === "string" && /^[a-z][a-z0-9_-]{1,31}$/.test(provider.id)
+        && !reservedIds.has(provider.id) && typeof provider.name === "string"
+        && typeof provider.baseUrl === "string" && provider.baseUrl.startsWith("https://")
+        && typeof provider.apiKeyEnv === "string" && /^[A-Z][A-Z0-9_]*$/.test(provider.apiKeyEnv)
+        && (typeof provider.models === "string" || (Array.isArray(provider.models) && provider.models.every((model) => typeof model === "string")))
+        && (!provider.tokenLimitField || ["max_tokens", "max_completion_tokens"].includes(provider.tokenLimitField));
+      if (!valid) console.error("Skipping invalid OPENAI_COMPATIBLE_PROVIDERS entry.");
+      return valid;
+    }).map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      key: process.env[provider.apiKeyEnv],
+      models: Array.isArray(provider.models) ? provider.models.join(",") : provider.models,
+      baseUrl: provider.baseUrl,
+      protocol: "openai-compatible",
+      tokenLimitField: provider.tokenLimitField || "max_tokens"
+    }));
+  } catch (error) {
+    console.error("OPENAI_COMPATIBLE_PROVIDERS must be a valid JSON array:", error.message);
+    return [];
+  }
+}
+
 const providerSettings = [
-  { id: "gemini", name: "Google Gemini", key: process.env.GEMINI_API_KEY, models: process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || "gemini-3.8-flash" },
-  { id: "openai", name: "OpenAI", key: process.env.OPENAI_API_KEY, models: process.env.OPENAI_MODELS || "gpt-5-mini" },
-  { id: "anthropic", name: "Anthropic", key: process.env.ANTHROPIC_API_KEY, models: process.env.ANTHROPIC_MODELS || "claude-sonnet-4-5" }
+  { id: "gemini", name: "Google Gemini", key: process.env.GEMINI_API_KEY, models: process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || "gemini-3.8-flash", protocol: "gemini" },
+  { id: "openai", name: "OpenAI", key: process.env.OPENAI_API_KEY, models: process.env.OPENAI_MODELS || "gpt-5-mini", baseUrl: "https://api.openai.com/v1", protocol: "openai-compatible", tokenLimitField: "max_completion_tokens" },
+  { id: "agentrouter", name: "AgentRouter", key: process.env.AGENTROUTER_API_KEY, models: process.env.AGENTROUTER_MODELS || "gpt-5", baseUrl: process.env.AGENTROUTER_BASE_URL || "https://agentrouter.org/v1", protocol: "openai-compatible", tokenLimitField: "max_tokens" },
+  ...readCompatibleProviders(),
+  { id: "anthropic", name: "Anthropic", key: process.env.ANTHROPIC_API_KEY, models: process.env.ANTHROPIC_MODELS || "claude-sonnet-4-5", protocol: "anthropic" }
 ];
 const models = providerSettings.flatMap((provider) => provider.key
   ? provider.models.split(",").map((id) => id.trim()).filter(Boolean).map((id) => ({
@@ -246,8 +278,19 @@ async function streamGemini(model, messages, signal, onToken) {
   for await (const chunk of readSse(response, signal)) { const text = chunk.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join(""); if (text) onToken(text); }
 }
 async function streamOpenAI(model, messages, signal, onToken) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }, body: JSON.stringify({ model, messages: [{ role: "system", content: process.env.AI_SYSTEM_PROMPT || "You are Veyro, a helpful and clear AI assistant." }, ...messages], stream: true, max_completion_tokens: 2048 }), signal });
-  if (!response.ok) throw new Error(`OpenAI provider returned ${response.status}.`);
+  return streamOpenAICompatibleFor("openai", model, messages, signal, onToken);
+}
+async function streamAgentRouter(model, messages, signal, onToken) {
+  return streamOpenAICompatibleFor("agentrouter", model, messages, signal, onToken);
+}
+function streamOpenAICompatibleFor(providerId, model, messages, signal, onToken) {
+  const settings = providerSettings.find((provider) => provider.id === providerId);
+  return streamOpenAICompatible({ model, messages, signal, onToken, apiKey: settings.key, baseUrl: settings.baseUrl, providerName: settings.name, tokenLimitField: settings.tokenLimitField });
+}
+async function streamOpenAICompatible({ model, messages, signal, onToken, apiKey, baseUrl, providerName, tokenLimitField }) {
+  const endpoint = `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }, body: JSON.stringify({ model, messages: [{ role: "system", content: process.env.AI_SYSTEM_PROMPT || "You are Veyro, a helpful and clear AI assistant." }, ...messages], stream: true, [tokenLimitField]: 2048 }), signal });
+  if (!response.ok) throw new Error(`${providerName} provider returned ${response.status}.`);
   for await (const chunk of readSse(response, signal)) { const text = chunk.choices?.[0]?.delta?.content; if (text) onToken(text); }
 }
 async function streamAnthropic(model, messages, signal, onToken) {
@@ -255,7 +298,14 @@ async function streamAnthropic(model, messages, signal, onToken) {
   if (!response.ok) throw new Error(`Anthropic provider returned ${response.status}.`);
   for await (const chunk of readSse(response, signal)) { if (chunk.type === "content_block_delta" && chunk.delta?.type === "text_delta") onToken(chunk.delta.text); }
 }
-const streamers = { gemini: streamGemini, openai: streamOpenAI, anthropic: streamAnthropic };
+const streamers = {
+  gemini: streamGemini,
+  openai: streamOpenAI,
+  agentrouter: streamAgentRouter,
+  anthropic: streamAnthropic,
+  ...Object.fromEntries(providerSettings.filter((provider) => provider.protocol === "openai-compatible" && !["openai", "agentrouter"].includes(provider.id))
+    .map((provider) => [provider.id, (model, messages, signal, onToken) => streamOpenAICompatibleFor(provider.id, model, messages, signal, onToken)]))
+};
 app.post("/api/chat", requireCsrf, requireUser, databaseRateLimit("chat", 30, 60_000), async (req, res, next) => {
   const parsed = chatSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Please send a valid message and model." });

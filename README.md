@@ -4,7 +4,7 @@ Veyro is a multi-provider AI chat app built with React, Vite, Express, and Postg
 
 ## Features
 
-- Choose configured Gemini, OpenAI, and Anthropic models; provider credentials remain on the server.
+- Choose configured Gemini, OpenAI, AgentRouter, Anthropic, and additional OpenAI-compatible provider models; provider credentials remain on the server.
 - Stream responses from the selected provider.
 - Create an account with a password hash, then use an HTTP-only session cookie with CSRF protection.
 - Persist chat history in PostgreSQL and enforce per-account ownership on conversation routes.
@@ -51,11 +51,31 @@ GEMINI_API_KEY=
 GEMINI_MODELS=gemini-3.8-flash
 OPENAI_API_KEY=
 OPENAI_MODELS=gpt-5-mini
+AGENTROUTER_API_KEY=
+AGENTROUTER_MODELS=gpt-5
+AGENTROUTER_BASE_URL=https://agentrouter.org/v1
 ANTHROPIC_API_KEY=
 ANTHROPIC_MODELS=claude-sonnet-5
+OPENAI_COMPATIBLE_PROVIDERS=
 ```
 
-Use model IDs enabled for your provider account. Availability and names can change. Provider usage is billed by the provider to the key owner.
+For AgentRouter, create a token at [agentrouter.org/console/token](https://agentrouter.org/console/token), then set `AGENTROUTER_API_KEY` to that token and `AGENTROUTER_MODELS` to one or more model IDs enabled in your AgentRouter account. The default API base URL is `https://agentrouter.org/v1`.
+
+You can add multiple additional services that expose the OpenAI-compatible chat completions API. Put their key variables (such as `GROQ_API_KEY`) in the server environment, then describe each provider in `OPENAI_COMPATIBLE_PROVIDERS` as JSON:
+
+```json
+[
+  {
+    "id": "groq",
+    "name": "Groq",
+    "baseUrl": "https://provider-api.example/v1",
+    "apiKeyEnv": "GROQ_API_KEY",
+    "models": ["provider-model-id"]
+  }
+]
+```
+
+Replace the example base URL and model ID with the provider's documented values. Add multiple objects for multiple services. `tokenLimitField` is optional and accepts `max_tokens` by default or `max_completion_tokens` when the service requires it. Gemini and Anthropic use their native APIs and already have dedicated adapters; a provider with a different API format needs its own adapter. Use model IDs enabled for each provider account. Provider usage is billed by the provider to the key owner.
 
 ## Deploy on Vercel
 
@@ -71,7 +91,10 @@ Use model IDs enabled for your provider account. Availability and names can chan
    | `SESSION_SECRET` | Long, random secret; use Vercel's Generate option |
    | `DAILY_CHAT_LIMIT` | Optional; defaults to `25` |
    | `AI_TIMEOUT_MS` | Optional; use `50000` with the included 60-second function duration |
-   | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | Add the provider key(s) you intend to use |
+   | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `AGENTROUTER_API_KEY`, `ANTHROPIC_API_KEY` | Add the provider key(s) you intend to use |
+   | `AGENTROUTER_MODELS` | Optional; comma-separated model IDs enabled in AgentRouter |
+   | `AGENTROUTER_BASE_URL` | Optional; defaults to `https://agentrouter.org/v1` |
+   | `OPENAI_COMPATIBLE_PROVIDERS` | Optional JSON list to add compatible providers; add each referenced key variable separately |
 
 4. Redeploy after setting the variables. Visit `/api/health` on the deployment; it should report `status: "ok"` and `database: "connected"`. Then create an account and try a conversation.
 
