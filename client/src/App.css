@@ -1,5 +1,5 @@
 :root { --bg: #101016; --sidebar: #0d0d13; --panel: #14141d; --surface: #191923; --surface-hover: #20202d; --border: rgba(255,255,255,.075); --text: #f3f1fa; --muted: #9290a4; --faint: #666477; --violet: #a78bfa; --blue: #60a5fa; }
-.app-shell { display: flex; min-height: 100vh; background: radial-gradient(ellipse at 52% 40%, rgba(76,54,134,.075), transparent 50%), var(--bg); color: var(--text); }
+.app-shell { display: flex; min-height: 100vh; background: var(--bg); color: var(--text); }
 .sidebar { width: 258px; flex: 0 0 258px; min-height: 100vh; background: rgba(12,12,18,.96); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 22px 14px 15px; z-index: 20; }
 .sidebar-top { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; margin-bottom: 29px; }
 .brand { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
@@ -116,7 +116,7 @@
 .error-banner { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; padding: 10px 12px; border: 1px solid rgba(248,113,113,.22); border-radius: 9px; background: rgba(127,29,29,.12); color: #fca5a5; font-size: 11px; line-height: 1.5; margin-bottom: 9px; }
 .error-banner button { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0; }
 .mobile-scrim { display: none; }
-.auth-screen { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: clamp(28px, 5vw, 76px); overflow: hidden; background: radial-gradient(ellipse at 18% 49%, rgba(76,54,134,.2), transparent 42%), radial-gradient(ellipse at 84% 12%, rgba(45,67,130,.12), transparent 35%), var(--bg); color: var(--text); }
+.auth-screen { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: clamp(28px, 5vw, 76px); overflow: hidden; background: var(--bg); color: var(--text); }
 .auth-layout { width: min(1370px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(400px, 470px); align-items: center; gap: clamp(54px, 8vw, 132px); margin: auto; }
 .auth-story { min-width: 0; min-height: min(730px, calc(100vh - 100px)); position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 0 5px 2%; overflow: hidden; }
 .auth-story > .brand { position: relative; z-index: 2; }
@@ -144,7 +144,7 @@
 .auth-art-chip-bottom { bottom: 16%; left: 1%; }
 .auth-art-chip-top svg { color: #a995ff; }
 .auth-art-dot { width: 6px; height: 6px; border-radius: 50%; background: #6ee7d3; box-shadow: 0 0 10px rgba(110,231,211,.6); }
-.auth-card { position: relative; z-index: 2; width: 100%; padding: clamp(34px, 3.6vw, 48px); border: 1px solid rgba(167,139,250,.2); border-radius: 20px; background: linear-gradient(145deg, rgba(22,21,31,.97), rgba(18,18,26,.98)); box-shadow: 0 28px 100px rgba(0,0,0,.35), 0 1px rgba(255,255,255,.025) inset; }
+.auth-card { position: relative; z-index: 2; width: 100%; padding: clamp(34px, 3.6vw, 48px); border: 1px solid rgba(167,139,250,.17); border-radius: 20px; background: #14141d; box-shadow: 0 22px 70px rgba(0,0,0,.25); }
 .auth-eyebrow { color: #aaa0d5; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; margin: 0 0 9px; }
 .auth-card h1 { font: 600 30px/1.2 'Space Grotesk', sans-serif; margin: 0; letter-spacing: -.8px; }
 .auth-subtitle { color: #9290a4; font-size: 13px; line-height: 1.75; margin: 11px 0 27px; }
