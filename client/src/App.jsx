@@ -14,7 +14,7 @@ const starterPrompts = [
 ];
 
 function VeyroMark() {
-  return <div className="brand"><span className="brand-wordmark">Vey<span className="brand-accent">r</span>o</span></div>;
+  return <div className="brand"><svg className="brand-symbol" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M35.3 13.1A16.2 16.2 0 1 0 39.5 23" stroke="#A99BFF" strokeWidth="3" strokeLinecap="round"/><path d="M22 16.5c1.2 4.6 2.8 6.2 7.5 7.5-4.7 1.3-6.3 2.9-7.5 7.5-1.2-4.6-2.8-6.2-7.5-7.5 4.7-1.3 6.3-2.9 7.5-7.5Z" fill="#78C9EF"/><circle cx="38.4" cy="11" r="3.1" fill="#BCA1FF"/></svg><span className="brand-word">veyro<span className="brand-dot">.</span></span></div>;
 }
 
 function App() {
