@@ -14,13 +14,17 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
+            package-lock.json
             client/package-lock.json
             server/package-lock.json
+      - name: Install Vercel function dependencies
+        run: npm ci
       - name: Install client dependencies
         run: npm ci --prefix client
       - name: Build client
         run: npm run build --prefix client
-      - name: Install API dependencies
-        run: npm ci --prefix server
       - name: Check API syntax
-        run: node --check server/server.js
+        run: |
+          node --check server/server.js
+          node --check server/database.js
+          node --check "api/[...path].js"

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowUp, Plus, Menu, X, MessageSquare, Code2, FileText,
-  Image as ImageIcon, Sparkles, PanelLeftClose, ShieldCheck
+  ArrowUp, Plus, Menu, X, MessageSquare, Code2, FileText, Image as ImageIcon,
+  Sparkles, PanelLeftClose, ShieldCheck, LogOut, Trash2
 } from "lucide-react";
 import "./App.css";
 
-const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "")).replace(/\/$/, "");
-
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const starterPrompts = [
   { icon: Code2, title: "Help me write code", text: "Explain a JavaScript function with a simple example." },
   { icon: FileText, title: "Understand a document", text: "How can I summarize a long PDF document?" },
@@ -15,22 +14,7 @@ const starterPrompts = [
 ];
 
 function VeyroMark({ compact = false }) {
-  return (
-    <div className={`brand ${compact ? "brand-compact" : ""}`}>
-      <div className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 40" role="img">
-          <defs>
-            <linearGradient id="veyro-gradient" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" />
-              <stop offset="100%" stopColor="#38bdf8" />
-            </linearGradient>
-          </defs>
-          <path d="M6 9 L15 9 L21 24 L28 9 L36 9 L23 33 L17 33 Z" fill="url(#veyro-gradient)" />
-        </svg>
-      </div>
-      {!compact && <span className="brand-word">veyro<span className="brand-dot">.</span></span>}
-    </div>
-  );
+  return <div className={`brand ${compact ? "brand-compact" : ""}`}><div className="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><defs><linearGradient id="veyro-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#38bdf8" /></linearGradient></defs><path d="M6 9 L15 9 L21 24 L28 9 L36 9 L23 33 L17 33 Z" fill="url(#veyro-gradient)" /></svg></div>{!compact && <span className="brand-word">veyro<span className="brand-dot">.</span></span>}</div>;
 }
 
 function App() {
@@ -42,190 +26,174 @@ function App() {
   const [apiStatus, setApiStatus] = useState("checking");
   const [availableModels, setAvailableModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState("");
+  const [user, setUser] = useState(null);
+  const [csrfToken, setCsrfToken] = useState("");
+  const [authMode, setAuthMode] = useState("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [legalPage, setLegalPage] = useState("");
+  const [conversations, setConversations] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
   const endRef = useRef(null);
   const inputRef = useRef(null);
 
+  async function api(path, options = {}) {
+    const headers = { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) };
+    if (["POST", "DELETE", "PUT", "PATCH"].includes(options.method)) headers["X-CSRF-Token"] = csrfToken;
+    const response = await fetch(`${API_URL}${path}`, { credentials: "include", ...options, headers });
+    return response;
+  }
+
+  async function loadConversations() {
+    const response = await api("/api/conversations");
+    if (response.ok) setConversations((await response.json()).conversations || []);
+  }
+
   useEffect(() => {
     let active = true;
-    Promise.all([fetch(`${API_URL}/api/health`), fetch(`${API_URL}/api/models`)])
-      .then(async ([healthResponse, modelsResponse]) => {
-        if (!healthResponse.ok || !modelsResponse.ok) throw new Error("Backend unavailable");
-        return [await healthResponse.json(), await modelsResponse.json()];
+    Promise.all([fetch(`${API_URL}/api/health`, { credentials: "include" }), fetch(`${API_URL}/api/models`, { credentials: "include" }), fetch(`${API_URL}/api/auth/me`, { credentials: "include" })])
+      .then(async ([healthResponse, modelResponse, authResponse]) => {
+        if (!healthResponse.ok || !modelResponse.ok || !authResponse.ok) throw new Error("Backend unavailable");
+        return [await healthResponse.json(), await modelResponse.json(), await authResponse.json()];
       })
-      .then(([health, modelData]) => {
+      .then(([health, modelData, authData]) => {
         if (!active) return;
         setApiStatus(health.status === "ok" ? "online" : "offline");
         setAvailableModels(modelData.models || []);
         setSelectedModel(modelData.defaultModel || "");
-      })
-      .catch(() => { if (active) setApiStatus("offline"); });
+        setUser(authData.user);
+        setCsrfToken(authData.csrfToken || "");
+      }).catch(() => { if (active) setApiStatus("offline"); });
     return () => { active = false; };
   }, []);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, loading]);
+  useEffect(() => { if (user) loadConversations().catch(() => {}); else setConversations([]); }, [user]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
+
+  async function submitAuth(event) {
+    event.preventDefault(); setAuthBusy(true); setAuthError("");
+    try {
+      const response = await api(`/api/auth/${authMode === "signup" ? "signup" : "login"}`, { method: "POST", body: JSON.stringify({ email: authEmail, password: authPassword }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not sign in.");
+      setUser(data.user); setCsrfToken(data.csrfToken); setAuthPassword("");
+    } catch (err) { setAuthError(err.message || "Could not connect to Veyro."); }
+    finally { setAuthBusy(false); }
+  }
+
+  async function signOut() {
+    try { const response = await api("/api/auth/logout", { method: "POST", body: "{}" }); if (!response.ok) throw new Error(); setUser(null); setMessages([]); setConversationId(null); }
+    catch { setError("Could not sign out. Please try again."); }
+  }
+
+  async function deleteAccount() {
+    if (!window.confirm("Delete your account and all saved conversations? This cannot be undone.")) return;
+    try { const response = await api("/api/auth/account", { method: "DELETE" }); if (!response.ok) throw new Error(); setUser(null); setMessages([]); setConversationId(null); }
+    catch { setError("Could not delete your account. Please try again."); }
+  }
+
+  async function openConversation(id) {
+    setError("");
+    try {
+      const response = await api(`/api/conversations/${id}`); const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not open conversation.");
+      setConversationId(id); setMessages(data.messages || []); if (data.conversation.model_id) setSelectedModel(data.conversation.model_id); setSidebarOpen(false);
+    } catch (err) { setError(err.message); }
+  }
+
+  async function deleteConversation(id) {
+    try {
+      const response = await api(`/api/conversations/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Could not delete that conversation.");
+      setConversations((items) => items.filter((item) => item.id !== id));
+      if (conversationId === id) startNewChat();
+    } catch (err) { setError(err.message); }
+  }
 
   async function sendMessage(text = input) {
     const prompt = text.trim();
     if (!prompt || loading) return;
-
-    if (!selectedModel) {
-      setError("Add at least one provider API key to server/.env, then restart the API.");
-      return;
-    }
+    if (!selectedModel) { setError("Add at least one provider API key to the server, then restart the API."); return; }
     const nextMessages = [...messages, { role: "user", content: prompt }];
-    const withAssistantPlaceholder = [...nextMessages, { role: "assistant", content: "" }];
-    setMessages(nextMessages);
-    setInput("");
-    setError("");
-    setLoading(true);
-    setSidebarOpen(false);
-    let partialReply = "";
-
+    setMessages([...nextMessages, { role: "assistant", content: "" }]); setInput(""); setError(""); setLoading(true); setSidebarOpen(false);
+    let partialReply = ""; let activeConversationId = conversationId;
     try {
-      setMessages(withAssistantPlaceholder);
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, model: selectedModel })
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Veyro could not complete that request.");
-      }
+      const response = await api("/api/chat", { method: "POST", body: JSON.stringify({ conversationId: activeConversationId, message: prompt, model: selectedModel }) });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Veyro could not complete that request."); }
       if (!response.body) throw new Error("Streaming is not available in this browser.");
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finished = false;
+      const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = ""; let finished = false;
       while (!finished) {
-        const { value, done } = await reader.read();
-        buffer += decoder.decode(value, { stream: !done });
-        const events = buffer.split(/\r?\n\r?\n/);
-        buffer = events.pop() || "";
-        for (const eventBlock of events) {
-          const eventName = eventBlock.split(/\r?\n/).find((line) => line.startsWith("event:"))?.slice(6).trim();
-          const dataLine = eventBlock.split(/\r?\n/).find((line) => line.startsWith("data:"))?.slice(5).trim();
-          if (!dataLine) continue;
+        const { value, done } = await reader.read(); buffer += decoder.decode(value, { stream: !done });
+        const events = buffer.split(/\r?\n\r?\n/); buffer = events.pop() || "";
+        for (const block of events) {
+          const eventName = block.split(/\r?\n/).find((line) => line.startsWith("event:"))?.slice(6).trim();
+          const dataLine = block.split(/\r?\n/).find((line) => line.startsWith("data:"))?.slice(5).trim(); if (!dataLine) continue;
           const eventData = JSON.parse(dataLine);
-          if (eventName === "token") {
-            partialReply += eventData.text || "";
-            setMessages([...nextMessages, { role: "assistant", content: partialReply }]);
-          } else if (eventName === "error") {
-            throw new Error(eventData.message || "Veyro could not complete that request.");
-          } else if (eventName === "done") {
-            finished = true;
-          }
+          if (eventName === "start" && eventData.conversationId) { activeConversationId = eventData.conversationId; setConversationId(eventData.conversationId); }
+          if (eventName === "token") { partialReply += eventData.text || ""; setMessages([...nextMessages, { role: "assistant", content: partialReply }]); }
+          if (eventName === "error") throw new Error(eventData.message || "Veyro could not complete that request.");
+          if (eventName === "done") finished = true;
         }
         if (done) finished = true;
       }
       if (!partialReply) setMessages(nextMessages);
+      await loadConversations();
     } catch (err) {
       setMessages(partialReply ? [...nextMessages, { role: "assistant", content: partialReply }] : nextMessages);
       setError(err.message || "Could not connect to Veyro. Check that the backend is running.");
-    } finally {
-      setLoading(false);
-      inputRef.current?.focus();
-    }
+    } finally { setLoading(false); inputRef.current?.focus(); }
   }
 
-  function startNewChat() {
-    setMessages([]);
-    setError("");
-    setInput("");
-    setSidebarOpen(false);
-    inputRef.current?.focus();
-  }
+  function startNewChat() { setMessages([]); setConversationId(null); setError(""); setInput(""); setSidebarOpen(false); inputRef.current?.focus(); }
+
+  if (!user && legalPage) return <main className="auth-screen"><article className="auth-card legal-card"><VeyroMark /><button className="legal-back" onClick={() => setLegalPage("")}>← Back to sign in</button><h1>{legalPage === "privacy" ? "Privacy overview" : "Terms of use"}</h1>{legalPage === "privacy" ? <><p>Veyro is a portfolio application. Before public launch, replace this overview with a policy reviewed for your business and local law, and add a support contact.</p><h2>Information this version stores</h2><p>Account email, password hash, session data, conversation titles, selected model IDs, prompts, responses, and timestamps are stored in its PostgreSQL database. Passwords are hashed; the original password is not stored.</p><h2>AI providers</h2><p>When you send a message, Veyro sends the conversation context and selected model request to that model provider to generate a response. Provider terms and data handling also apply.</p><h2>Cookies, retention, and deletion</h2><p>An essential HTTP-only session cookie keeps you signed in. Saved chats remain until you delete them by deleting your account or the database is removed. Database backup retention depends on the host. This demo does not currently include email verification or password recovery.</p><h2>Contact</h2><p>Add a monitored support email and the operator's legal identity here before enabling public registration.</p></> : <><p>Veyro is provided as an AI chat application. AI responses may be inaccurate or incomplete; verify important information before relying on it.</p><h2>Accounts and content</h2><p>Keep your account credentials private. You are responsible for the prompts you submit and for using the selected AI provider under its applicable terms.</p><h2>Availability and costs</h2><p>Availability may depend on the hosting platform and configured AI provider. Model usage can incur provider charges for the operator. Do not enable public access until spending limits and abuse protections are configured.</p><h2>Before public launch</h2><p>These starter terms need review and completion with the operator's identity, jurisdiction, support contact, and any applicable service commitments.</p></>}</article></main>;
+
+  if (!user) return (
+    <main className="auth-screen">
+      <section className="auth-card">
+        <VeyroMark />
+        <p className="auth-eyebrow">YOUR AI WORKSPACE</p>
+        <h1>{authMode === "signup" ? "Create your account" : "Welcome back"}</h1>
+        <p className="auth-subtitle">Sign in to use Veyro and keep your conversations saved to your account.</p>
+        {apiStatus === "offline" && <div className="error-banner">Veyro's API or database is unavailable. Check the deployment configuration.</div>}
+        <form className="auth-form" onSubmit={submitAuth}>
+          <label>Email address<input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required maxLength={254} /></label>
+          <label>Password<input type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /></label>
+          {authMode === "signup" && <p className="password-hint">Use at least 10 characters.</p>}
+          {authError && <div className="error-banner" role="alert">{authError}</div>}
+          <button className="auth-submit" disabled={authBusy || apiStatus === "offline"}>{authBusy ? "Please wait…" : authMode === "signup" ? "Create account" : "Sign in"}</button>
+        </form>
+        <p className="auth-switch">{authMode === "signup" ? "Already have an account?" : "New to Veyro?"} <button onClick={() => { setAuthMode(authMode === "signup" ? "login" : "signup"); setAuthError(""); }}>{authMode === "signup" ? "Sign in" : "Create account"}</button></p>
+        <p className="auth-privacy">Veyro stores your email and saved chats to provide the service. Prompts are sent to the AI provider you select. Your session uses an essential secure cookie; provider keys stay on the server. <button onClick={() => setLegalPage("privacy")}>Privacy</button> · <button onClick={() => setLegalPage("terms")}>Terms</button></p>
+      </section>
+    </main>
+  );
 
   return (
     <div className="app-shell">
       {sidebarOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <VeyroMark />
-          <button className="icon-button close-sidebar" aria-label="Close menu" onClick={() => setSidebarOpen(false)}><X size={18} /></button>
-        </div>
-        <button className="new-chat-button" onClick={startNewChat}>
-          <Plus size={17} /> <span>New chat</span> <span className="shortcut">Ctrl K</span>
-        </button>
-
-          <div className="nav-label">WORKSPACE</div>
-        <nav className="workspace-nav" aria-label="Workspace">
-          <button className="nav-item active" onClick={() => setSidebarOpen(false)}><MessageSquare size={17} /><span>AI Assistant</span><span className="active-dot" /></button>
-        </nav>
-
+        <div className="sidebar-top"><VeyroMark /><button className="icon-button close-sidebar" aria-label="Close menu" onClick={() => setSidebarOpen(false)}><X size={18} /></button></div>
+        <button className="new-chat-button" onClick={startNewChat}><Plus size={17} /> <span>New chat</span> <span className="shortcut">Ctrl K</span></button>
+        <div className="nav-label">WORKSPACE</div>
+        <nav className="workspace-nav" aria-label="Workspace"><button className="nav-item active" onClick={() => setSidebarOpen(false)}><MessageSquare size={17} /><span>AI Assistant</span><span className="active-dot" /></button></nav>
         <div className="sidebar-divider" />
-        <div className="history-heading"><span className="nav-label">THIS SESSION</span><PanelLeftClose size={15} /></div>
-        {messages.length > 0 ? (
-          <div className="history-item"><MessageSquare size={15} /><span>{messages.find(m => m.role === "user")?.content || "Current conversation"}</span></div>
-        ) : <p className="empty-history">Chat history is not saved yet.</p>}
-
+        <div className="history-heading"><span className="nav-label">SAVED CHATS</span><PanelLeftClose size={15} /></div>
+        {conversations.length ? <div className="saved-chat-list">{conversations.map((chat) => <div className="chat-history-row" key={chat.id}><button className={`history-item ${conversationId === chat.id ? "selected" : ""}`} onClick={() => openConversation(chat.id)}><MessageSquare size={15} /><span>{chat.title}</span></button><button className="delete-chat-button" title="Delete conversation" aria-label={`Delete ${chat.title}`} onClick={() => deleteConversation(chat.id)}><Trash2 size={13} /></button></div>)}</div> : <p className="empty-history">Your saved conversations will appear here.</p>}
         <div className="sidebar-bottom">
-          <label className="model-card" htmlFor="model-select">
-            <div className="model-icon"><Sparkles size={16} /></div>
-            <div className="model-copy"><strong>Choose a model</strong><span>{availableModels.length ? `${availableModels.length} configured` : "No provider keys configured"}</span></div>
-            <select id="model-select" value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)} disabled={!availableModels.length || loading} aria-label="Choose AI model">
-              {!availableModels.length && <option value="">Configure a provider</option>}
-              {availableModels.map((model) => <option value={model.id} key={model.id}>{model.providerName} · {model.label}</option>)}
-            </select>
-          </label>
-          <div className="privacy-note"><ShieldCheck size={14} /><span>Built with privacy and safety in mind</span></div>
+          <label className="model-card" htmlFor="model-select"><div className="model-icon"><Sparkles size={16} /></div><div className="model-copy"><strong>Choose a model</strong><span>{availableModels.length ? `${availableModels.length} configured` : "No provider keys configured"}</span></div><select id="model-select" value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)} disabled={!availableModels.length || loading} aria-label="Choose AI model">{!availableModels.length && <option value="">Configure a provider</option>}{availableModels.map((model) => <option value={model.id} key={model.id}>{model.providerName} · {model.label}</option>)}</select></label>
+          <div className="account-card"><span>{user.email}</span><div><button title="Sign out" aria-label="Sign out" onClick={signOut}><LogOut size={15} /></button><button title="Delete account" aria-label="Delete account and saved chats" onClick={deleteAccount}><Trash2 size={15} /></button></div></div>
+          <div className="privacy-note"><ShieldCheck size={14} /><span>Private account conversations</span></div>
         </div>
       </aside>
-
       <main className="main-panel">
-        <header className="topbar">
-          <button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
-          <div className="mobile-brand"><VeyroMark /></div>
-          <div className="topbar-context"><span className="context-dot" /> AI Assistant <span className="context-separator">/</span> <span className="context-muted">New conversation</span></div>
-          <div className="topbar-right">{import.meta.env.DEV && <><span className={`connection-indicator ${apiStatus}`} /><span className="connection-text">{apiStatus === "checking" ? "Connecting" : apiStatus === "online" ? "API connected" : "API offline"}</span></>}<button className="top-new-chat" onClick={startNewChat}><Plus size={15} /><span>New chat</span></button></div>
-        </header>
-
+        <header className="topbar"><button className="icon-button mobile-menu" aria-label="Open navigation" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button><div className="mobile-brand"><VeyroMark /></div><div className="topbar-context"><span className="context-dot" /> AI Assistant <span className="context-separator">/</span> <span className="context-muted">{messages[0]?.content?.slice(0, 34) || "New conversation"}</span></div><div className="topbar-right">{import.meta.env.DEV && <><span className={`connection-indicator ${apiStatus}`} /><span className="connection-text">{apiStatus === "checking" ? "Connecting" : apiStatus === "online" ? "API connected" : "API offline"}</span></>}<button className="top-new-chat" onClick={startNewChat}><Plus size={15} /><span>New chat</span></button></div></header>
         <section className={`conversation ${messages.length ? "conversation-active" : ""}`}>
-          {messages.length === 0 ? (
-            <div className="welcome">
-              <div className="welcome-eyebrow"><span className="eyebrow-line" /><Sparkles size={13} /><span>YOUR AI WORKSPACE</span><span className="eyebrow-line" /></div>
-              <div className="welcome-emblem"><VeyroMark compact /><span className="emblem-orbit orbit-one" /><span className="emblem-orbit orbit-two" /></div>
-              <h1>Think beyond<br /><span>the ordinary.</span></h1>
-              <p className="welcome-description">Meet Veyro, your space to explore ideas, solve problems,<br className="desktop-break" /> and turn curiosity into something extraordinary.</p>
-              <div className="prompt-grid">
-                {starterPrompts.map(({ icon: Icon, title, text }) => (
-                  <button className="prompt-card" key={title} onClick={() => sendMessage(text)}>
-                    <span className="prompt-icon"><Icon size={17} /></span>
-                    <span className="prompt-title">{title}</span>
-                    <span className="prompt-text">{text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="message-list">
-              {messages.map((message, index) => {
-                if (loading && message.role === "assistant" && !message.content) return null;
-                return (
-                  <article className={`message-row ${message.role}`} key={`${index}-${message.role}`}>
-                    <div className="message-body">
-                      <div className="message-author">{message.role === "assistant" ? "Veyro" : "You"}</div>
-                      <div className="message-content">{message.content}</div>
-                    </div>
-                  </article>
-                );
-              })}
-              {loading && (messages[messages.length - 1]?.role !== "assistant" || !messages[messages.length - 1]?.content) && <article className="message-row assistant" role="status" aria-label="Veyro is thinking"><div className="assistant-avatar thinking-avatar" aria-hidden="true"><span className="thinking-spinner" /></div><div className="message-body"><div className="message-author">Veyro is thinking</div><div className="typing-indicator"><span /><span /><span /></div></div></article>}
-              <div ref={endRef} />
-            </div>
-          )}
+          {messages.length === 0 ? <div className="welcome"><div className="welcome-eyebrow"><span className="eyebrow-line" /><Sparkles size={13} /><span>YOUR AI WORKSPACE</span><span className="eyebrow-line" /></div><div className="welcome-emblem"><VeyroMark compact /><span className="emblem-orbit orbit-one" /><span className="emblem-orbit orbit-two" /></div><h1>Think beyond<br /><span>the ordinary.</span></h1><p className="welcome-description">Meet Veyro, your space to explore ideas, solve problems,<br className="desktop-break" /> and turn curiosity into something extraordinary.</p><div className="prompt-grid">{starterPrompts.map(({ icon: Icon, title, text }) => <button className="prompt-card" key={title} onClick={() => sendMessage(text)}><span className="prompt-icon"><Icon size={17} /></span><span className="prompt-title">{title}</span><span className="prompt-text">{text}</span></button>)}</div></div> : <div className="message-list">{messages.map((message, index) => { if (loading && message.role === "assistant" && !message.content) return null; return <article className={`message-row ${message.role}`} key={`${index}-${message.role}`}><div className="message-body"><div className="message-author">{message.role === "assistant" ? "Veyro" : "You"}</div><div className="message-content">{message.content}</div></div></article>; })}{loading && (messages[messages.length - 1]?.role !== "assistant" || !messages[messages.length - 1]?.content) && <article className="message-row assistant" role="status" aria-label="Veyro is thinking"><div className="assistant-avatar thinking-avatar" aria-hidden="true"><span className="thinking-spinner" /></div><div className="message-body"><div className="message-author">Veyro is thinking</div><div className="typing-indicator"><span /><span /><span /></div></div></article>}<div ref={endRef} /></div>}
         </section>
-
-        <footer className="composer-area">
-          {error && <div className="error-banner" role="status">{error}<button onClick={() => setError("")} aria-label="Dismiss message"><X size={14} /></button></div>}
-          <form className="composer" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}>
-            <textarea ref={inputRef} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Message Veyro..." rows={1} aria-label="Message Veyro" />
-            <div className="composer-bottom"><span className="composer-hint"><span className="hint-key">↵</span> to send <span className="hint-divider">·</span> <span className="hint-key">Shift ↵</span> for new line</span><button className="send-button" type="submit" disabled={!input.trim() || loading} aria-label="Send message">{loading ? <span className="send-spinner" /> : <ArrowUp size={18} />}</button></div>
-          </form>
-          <p className="disclaimer">Veyro is an AI assistant and can make mistakes. Verify important information.</p>
-        </footer>
+        <footer className="composer-area">{error && <div className="error-banner" role="status">{error}<button onClick={() => setError("")} aria-label="Dismiss message"><X size={14} /></button></div>}<form className="composer" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}><textarea ref={inputRef} value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Message Veyro..." rows={1} aria-label="Message Veyro" /><div className="composer-bottom"><span className="composer-hint"><span className="hint-key">↵</span> to send <span className="hint-divider">·</span> <span className="hint-key">Shift ↵</span> for new line</span><button className="send-button" type="submit" disabled={!input.trim() || loading} aria-label="Send message">{loading ? <span className="send-spinner" /> : <ArrowUp size={18} />}</button></div></form><p className="disclaimer">Veyro is an AI assistant and can make mistakes. Verify important information.</p></footer>
       </main>
     </div>
   );

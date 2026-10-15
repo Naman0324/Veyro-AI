@@ -116,6 +116,41 @@
 .error-banner { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; padding: 10px 12px; border: 1px solid rgba(248,113,113,.22); border-radius: 9px; background: rgba(127,29,29,.12); color: #fca5a5; font-size: 11px; line-height: 1.5; margin-bottom: 9px; }
 .error-banner button { border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0; }
 .mobile-scrim { display: none; }
+.auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 35%, rgba(76,54,134,.16), transparent 55%), var(--bg); color: var(--text); }
+.auth-card { width: min(430px, 100%); padding: 34px; border: 1px solid rgba(167,139,250,.18); border-radius: 18px; background: rgba(19,19,28,.92); box-shadow: 0 24px 80px rgba(0,0,0,.32); }
+.auth-card > .brand { margin-bottom: 29px; }
+.auth-eyebrow { color: #aaa0d5; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; margin: 0 0 9px; }
+.auth-card h1 { font: 600 27px/1.2 'Space Grotesk', sans-serif; margin: 0; letter-spacing: -.7px; }
+.auth-subtitle { color: #9290a4; font-size: 12px; line-height: 1.7; margin: 10px 0 24px; }
+.auth-form { display: grid; gap: 14px; }
+.auth-form label { display: grid; gap: 7px; color: #c7c3d6; font-size: 11px; }
+.auth-form input { width: 100%; min-height: 42px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: #15151e; color: #f3f1fa; padding: 0 12px; font-size: 13px; outline: none; }
+.auth-form input:focus { border-color: rgba(167,139,250,.58); box-shadow: 0 0 0 3px rgba(139,92,246,.1); }
+.password-hint { color: #77758a; font-size: 10px; margin: -8px 0 0; }
+.auth-submit { min-height: 43px; border: 0; border-radius: 8px; color: white; background: linear-gradient(110deg,#9073ec,#627ff0); cursor: pointer; font-weight: 600; font-size: 12px; }
+.auth-submit:disabled { opacity: .55; cursor: wait; }
+.auth-switch { text-align: center; margin: 18px 0 0; color: #9290a4; font-size: 11px; }
+.auth-switch button { border: 0; background: transparent; color: #b9a8ff; cursor: pointer; font: inherit; font-weight: 600; }
+.auth-privacy { border-top: 1px solid var(--border); padding-top: 16px; margin: 18px 0 0; color: #77758a; font-size: 9px; line-height: 1.7; }
+.auth-privacy button { border: 0; padding: 0; background: transparent; color: #b9a8ff; cursor: pointer; font: inherit; }
+.legal-card { width: min(620px, 100%); max-height: min(86vh, 900px); overflow: auto; }
+.legal-card h1 { margin: 14px 0 18px; }
+.legal-card h2 { color: #d8d2ed; font-size: 13px; margin: 20px 0 7px; }
+.legal-card p { color: #9a97aa; font-size: 11px; line-height: 1.8; }
+.legal-back { display: block; border: 0; padding: 0; margin-top: 18px; background: transparent; color: #b9a8ff; cursor: pointer; font: inherit; font-size: 11px; }
+.account-card { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 9px 3px 0; color: #858297; font-size: 9px; }
+.account-card > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.account-card > div { display: flex; gap: 4px; }
+.account-card button { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid var(--border); border-radius: 7px; background: transparent; color: #9290a4; cursor: pointer; }
+.account-card button:hover { color: #fca5a5; border-color: rgba(248,113,113,.3); }
+.saved-chat-list { max-height: 38vh; overflow: auto; }
+.chat-history-row { display: flex; align-items: center; gap: 2px; }
+.chat-history-row .history-item { width: auto; min-width: 0; flex: 1; }
+.delete-chat-button { display: grid; place-items: center; flex: 0 0 27px; width: 27px; height: 27px; border: 0; border-radius: 6px; background: transparent; color: #676477; cursor: pointer; opacity: 0; }
+.chat-history-row:hover .delete-chat-button, .delete-chat-button:focus-visible { opacity: 1; }
+.delete-chat-button:hover { color: #fca5a5; background: rgba(248,113,113,.1); }
+.history-item.selected { color: #e6ddff; background: rgba(139,92,246,.1); border-radius: 7px; }
+@media (max-width: 480px) { .auth-screen { padding: 16px; } .auth-card { padding: 27px 22px; } }
 @media (min-width: 1500px) { .welcome { transform: translateY(-12px); } }
 @media (max-width: 1050px) { .sidebar { width: 230px; flex-basis: 230px; } .topbar { padding: 0 22px; } .welcome { padding-inline: 24px; } }
 @media (max-width: 760px) {
