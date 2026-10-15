@@ -49,14 +49,21 @@ app.use((req, res, next) => cors({
   allowedHeaders: ["Content-Type", "X-CSRF-Token"]
 })(req, res, next));
 app.use(express.json({ limit: "100kb" }));
-app.use(session({
-  store: new PgSession({ pool, tableName: "user_sessions", createTableIfMissing: true, pruneSessionInterval: process.env.VERCEL ? false : 15 * 60 }),
-  name: "veyro.sid",
-  secret: process.env.SESSION_SECRET || (!isProduction ? "local-only-veyro-session-secret-change-me" : ""),
-  resave: false,
-  saveUninitialized: false,
-  cookie: { httpOnly: true, secure: isProduction, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 }
-}));
+if (isProduction && !process.env.SESSION_SECRET) {
+  app.use((req, res, next) => {
+    if (req.path === "/api/health" || req.path === "/api/models") return next();
+    return res.status(503).json({ error: "SESSION_SECRET must be configured before account and chat routes can be used." });
+  });
+} else {
+  app.use(session({
+    store: new PgSession({ pool, tableName: "user_sessions", createTableIfMissing: true, pruneSessionInterval: process.env.VERCEL ? false : 15 * 60 }),
+    name: "veyro.sid",
+    secret: process.env.SESSION_SECRET || "local-only-veyro-session-secret-change-me",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, secure: isProduction, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 }
+  }));
+}
 const databaseReady = initializeDatabase();
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api/")) return next();
@@ -314,7 +321,6 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ error: "An unexpected server error occurred." });
 });
 
-if (isProduction && !process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required in production.");
 if (!process.env.VERCEL) databaseReady.then(() => {
   const server = app.listen(PORT, HOST, () => console.log(`Veyro API listening on ${HOST}:${PORT}`));
   const shutdown = () => server.close(() => pool.end().finally(() => process.exit(0)));

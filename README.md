@@ -59,8 +59,8 @@ Use model IDs enabled for your provider account. Availability and names can chan
 
 ## Deploy on Vercel
 
-1. Create a hosted PostgreSQL database with a connection pooler (for example through a Vercel Marketplace provider or another PostgreSQL host). Vercel hosts the web app and function; the database is a separate service.
-2. Import `Naman0324/Veyro-AI` into Vercel. Keep the project root at the repository root. The included `vercel.json` sets the build, static output, API function, and SPA fallback.
+1. Create a hosted PostgreSQL database with a connection pooler (for example through a Vercel Marketplace provider or another PostgreSQL host). Vercel hosts the web app and API as two services in one project; the database is a separate service.
+2. Import `Naman0324/Veyro-AI` into Vercel. Keep the project root at the repository root. The included `vercel.json` builds the Vite client and Express API as Vercel services and routes `/api/*` to the API and other paths to the client.
 3. Add these environment variables in Vercel Project Settings → Environment Variables:
 
    | Variable | Value |
@@ -75,7 +75,7 @@ Use model IDs enabled for your provider account. Availability and names can chan
 
 4. Redeploy after setting the variables. Visit `/api/health` on the deployment; it should report `status: "ok"` and `database: "connected"`. Then create an account and try a conversation.
 
-The same Vercel project serves the static client and `/api/*` function paths so the session cookie stays on one origin. Do not set `VITE_API_URL` for this deployment. Vercel Functions have plan-based duration and usage limits; this project sets a 60-second maximum for streaming chat. See [Express on Vercel](https://vercel.com/docs/frameworks/backend/express), [Vercel Function limits](https://vercel.com/docs/functions/limitations), and [Vercel environment variables](https://vercel.com/docs/environment-variables).
+The same Vercel project serves the client and `/api/*` routes so the session cookie stays on one origin. Do not set `VITE_API_URL` for this deployment. Vercel services have plan-based duration and usage limits; use a provider timeout below the configured Vercel function duration. See [Vercel Services](https://vercel.com/docs/services), [Express on Vercel](https://vercel.com/docs/frameworks/backend/express), and [Vercel environment variables](https://vercel.com/docs/environment-variables).
 
 ## Configuration
 
