@@ -152,22 +152,37 @@ function App() {
 
   if (!user) return (
     <main className="auth-screen">
-      <section className="auth-card">
-        <VeyroMark />
-        <p className="auth-eyebrow">YOUR AI WORKSPACE</p>
-        <h1>{authMode === "signup" ? "Create your account" : "Welcome back"}</h1>
-        <p className="auth-subtitle">Sign in to use Veyro and keep your conversations saved to your account.</p>
-        {apiStatus === "offline" && <div className="error-banner">Veyro's API or database is unavailable. Check the deployment configuration.</div>}
-        <form className="auth-form" onSubmit={submitAuth}>
-          <label>Email address<input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required maxLength={254} /></label>
-          <label>Password<input type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /></label>
-          {authMode === "signup" && <p className="password-hint">Use at least 10 characters.</p>}
-          {authError && <div className="error-banner" role="alert">{authError}</div>}
-          <button className="auth-submit" disabled={authBusy || apiStatus === "offline"}>{authBusy ? "Please wait…" : authMode === "signup" ? "Create account" : "Sign in"}</button>
-        </form>
-        <p className="auth-switch">{authMode === "signup" ? "Already have an account?" : "New to Veyro?"} <button onClick={() => { setAuthMode(authMode === "signup" ? "login" : "signup"); setAuthError(""); }}>{authMode === "signup" ? "Sign in" : "Create account"}</button></p>
-        <p className="auth-privacy">Veyro stores your email and saved chats to provide the service. Prompts are sent to the AI provider you select. Your session uses an essential secure cookie; provider keys stay on the server. <button onClick={() => setLegalPage("privacy")}>Privacy</button> · <button onClick={() => setLegalPage("terms")}>Terms</button></p>
-      </section>
+      <div className="auth-layout">
+        <section className="auth-story" aria-label="About Veyro">
+          <VeyroMark />
+          <div className="auth-story-copy">
+            <p className="auth-eyebrow">A CLEARER WAY TO THINK</p>
+            <h2>Make room<br />for <span>better ideas.</span></h2>
+            <p className="auth-story-description">One thoughtful workspace for questions, creative sparks, and the conversations you want to keep.</p>
+            <div className="auth-highlights">
+              <div><span className="auth-highlight-icon"><MessageSquare size={17} /></span><span><strong>Conversations that stay</strong><small>Pick up where your thinking left off.</small></span></div>
+              <div><span className="auth-highlight-icon"><Sparkles size={17} /></span><span><strong>Your choice of AI</strong><small>Move between the models you use.</small></span></div>
+            </div>
+          </div>
+          <div className="auth-art" aria-hidden="true"><div className="auth-art-glow" /><div className="auth-art-orbit auth-art-orbit-one" /><div className="auth-art-orbit auth-art-orbit-two" /><div className="auth-art-core"><VeyroMark compact /></div><div className="auth-art-chip auth-art-chip-top"><Sparkles size={14} /><span>Ideas, in motion</span></div><div className="auth-art-chip auth-art-chip-bottom"><span className="auth-art-dot" />Thoughtful by design</div></div>
+          <p className="auth-story-footer">A calmer space for curious minds.</p>
+        </section>
+        <section className="auth-card">
+          <p className="auth-eyebrow">YOUR AI WORKSPACE</p>
+          <h1>{authMode === "signup" ? "Create your account" : "Welcome back"}</h1>
+          <p className="auth-subtitle">Sign in to use Veyro and keep your conversations saved to your account.</p>
+          {apiStatus === "offline" && <div className="error-banner">Veyro's API or database is unavailable. Check the deployment configuration.</div>}
+          <form className="auth-form" onSubmit={submitAuth}>
+            <label>Email address<input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required maxLength={254} /></label>
+            <label>Password<input type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /></label>
+            {authMode === "signup" && <p className="password-hint">Use at least 10 characters.</p>}
+            {authError && <div className="error-banner" role="alert">{authError}</div>}
+            <button className="auth-submit" disabled={authBusy || apiStatus === "offline"}>{authBusy ? "Please wait…" : authMode === "signup" ? "Create account" : "Sign in"}</button>
+          </form>
+          <p className="auth-switch">{authMode === "signup" ? "Already have an account?" : "New to Veyro?"} <button onClick={() => { setAuthMode(authMode === "signup" ? "login" : "signup"); setAuthError(""); }}>{authMode === "signup" ? "Sign in" : "Create account"}</button></p>
+          <p className="auth-privacy">Veyro stores your email and saved chats to provide the service. Prompts are sent to the AI provider you select. Your session uses an essential secure cookie; provider keys stay on the server. <button onClick={() => setLegalPage("privacy")}>Privacy</button> · <button onClick={() => setLegalPage("terms")}>Terms</button></p>
+        </section>
+      </div>
     </main>
   );
 
