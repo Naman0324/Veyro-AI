@@ -60,6 +60,9 @@ app.use(session({
 const databaseReady = initializeDatabase();
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api/")) return next();
+  // Keep diagnostic and provider-discovery endpoints available when the database
+  // has not been configured yet. All account and chat routes still require it.
+  if (req.path === "/api/health" || req.path === "/api/models") return next();
   databaseReady.then(() => next()).catch(next);
 });
 app.use((req, res, next) => {

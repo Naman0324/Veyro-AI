@@ -14,7 +14,7 @@ const starterPrompts = [
 ];
 
 function VeyroMark() {
-  return <div className="brand"><svg className="brand-symbol" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M35.3 13.1A16.2 16.2 0 1 0 39.5 23" stroke="#A99BFF" strokeWidth="3" strokeLinecap="round"/><path d="M22 16.5c1.2 4.6 2.8 6.2 7.5 7.5-4.7 1.3-6.3 2.9-7.5 7.5-1.2-4.6-2.8-6.2-7.5-7.5 4.7-1.3 6.3-2.9 7.5-7.5Z" fill="#78C9EF"/><circle cx="38.4" cy="11" r="3.1" fill="#BCA1FF"/></svg><span className="brand-word">veyro<span className="brand-dot">.</span></span></div>;
+  return <div className="brand"><svg className="brand-symbol" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M8 30a16 16 0 0 0 32 0M15 26c2-4 5-6 9-6s7 2 9 6" stroke="#9E9FFF" strokeWidth="3" strokeLinecap="round"/><circle cx="24" cy="15" r="3" fill="#C2A3FF"/></svg><span className="brand-word">veyro<span className="brand-dot">.</span></span></div>;
 }
 
 function App() {
@@ -53,19 +53,24 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetch(`${API_URL}/api/health`, { credentials: "include" }), fetch(`${API_URL}/api/models`, { credentials: "include" }), fetch(`${API_URL}/api/auth/me`, { credentials: "include" })])
-      .then(async ([healthResponse, modelResponse, authResponse]) => {
-        if (!healthResponse.ok || !modelResponse.ok || !authResponse.ok) throw new Error("Backend unavailable");
-        return [await healthResponse.json(), await modelResponse.json(), await authResponse.json()];
-      })
-      .then(([health, modelData, authData]) => {
+    const requestJson = async (path) => {
+      const response = await fetch(`${API_URL}${path}`, { credentials: "include" });
+      if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+      return response.json();
+    };
+    Promise.allSettled([requestJson("/api/health"), requestJson("/api/models"), requestJson("/api/auth/me")])
+      .then(([healthResult, modelResult, authResult]) => {
         if (!active) return;
-        setApiStatus(health.status === "ok" ? "online" : "offline");
-        setAvailableModels(modelData.models || []);
-        setSelectedModel(modelData.defaultModel || "");
-        setUser(authData.user);
-        setCsrfToken(authData.csrfToken || "");
-      }).catch(() => { if (active) setApiStatus("offline"); });
+        setApiStatus(healthResult.status === "fulfilled" && healthResult.value.status === "ok" ? "online" : "offline");
+        if (modelResult.status === "fulfilled") {
+          setAvailableModels(modelResult.value.models || []);
+          setSelectedModel(modelResult.value.defaultModel || "");
+        }
+        if (authResult.status === "fulfilled") {
+          setUser(authResult.value.user);
+          setCsrfToken(authResult.value.csrfToken || "");
+        }
+      });
     return () => { active = false; };
   }, []);
 
@@ -170,7 +175,7 @@ function App() {
           <p className="auth-eyebrow">YOUR AI WORKSPACE</p>
           <h1>{authMode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <p className="auth-subtitle">Sign in to use Veyro and keep your conversations saved to your account.</p>
-          {apiStatus === "offline" && <div className="error-banner">Veyro's API or database is unavailable. Check the deployment configuration.</div>}
+          {apiStatus === "offline" && <div className="error-banner">Veyro's database is not connected. Add DATABASE_URL and SESSION_SECRET in Vercel, then redeploy.</div>}
           <form className="auth-form" onSubmit={submitAuth}>
             <label>Email address<input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required maxLength={254} /></label>
             <label>Password<input type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /></label>
