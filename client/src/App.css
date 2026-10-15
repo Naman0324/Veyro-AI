@@ -131,6 +131,11 @@
 .auth-form label { display: grid; gap: 7px; color: #c7c3d6; font-size: 11px; }
 .auth-form input { width: 100%; min-height: 46px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; background: #15151e; color: #f3f1fa; padding: 0 13px; font-size: 13px; outline: none; transition: border-color .18s, box-shadow .18s; }
 .auth-form input:focus { border-color: rgba(167,139,250,.58); box-shadow: 0 0 0 3px rgba(139,92,246,.1); }
+.password-input-wrap { position: relative; display: block; }
+.password-input-wrap input { padding-right: 46px; }
+.password-visibility-toggle { position: absolute; top: 50%; right: 6px; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; transform: translateY(-50%); border: 0; border-radius: 7px; background: transparent; color: #858297; cursor: pointer; }
+.password-visibility-toggle:hover { background: rgba(255,255,255,.06); color: #d8d5e4; }
+.password-visibility-toggle:focus-visible { outline: 2px solid #a78bfa; outline-offset: 1px; color: #e8e3ff; }
 .password-hint { color: #77758a; font-size: 10px; margin: -8px 0 0; }
 .auth-submit { min-height: 46px; margin-top: 4px; border: 0; border-radius: 9px; color: white; background: linear-gradient(110deg,#9073ec,#627ff0); cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 8px 24px rgba(111,95,213,.18); transition: filter .18s, transform .18s; }
 .auth-submit:hover:not(:disabled) { filter: brightness(1.09); transform: translateY(-1px); }

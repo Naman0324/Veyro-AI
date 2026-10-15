@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp, Plus, Menu, X, MessageSquare, Code2, FileText, Image as ImageIcon,
-  Sparkles, PanelLeftClose, ShieldCheck, LogOut, Trash2
+  Sparkles, PanelLeftClose, ShieldCheck, LogOut, Trash2, Eye, EyeOff
 } from "lucide-react";
 import "./App.css";
 
@@ -31,6 +31,7 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [legalPage, setLegalPage] = useState("");
@@ -178,7 +179,7 @@ function App() {
           {apiStatus === "offline" && <div className="error-banner">Veyro's database is not connected. Add DATABASE_URL and SESSION_SECRET in Vercel, then redeploy.</div>}
           <form className="auth-form" onSubmit={submitAuth}>
             <label>Email address<input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} required maxLength={254} /></label>
-            <label>Password<input type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /></label>
+            <label>Password<span className="password-input-wrap"><input type={showPassword ? "text" : "password"} autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} required minLength={10} maxLength={128} /><button className="password-visibility-toggle" type="button" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} title={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}</button></span></label>
             {authMode === "signup" && <p className="password-hint">Use at least 10 characters.</p>}
             {authError && <div className="error-banner" role="alert">{authError}</div>}
             <button className="auth-submit" disabled={authBusy || apiStatus === "offline"}>{authBusy ? "Please wait…" : authMode === "signup" ? "Create account" : "Sign in"}</button>
