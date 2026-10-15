@@ -65,6 +65,10 @@ if (isProduction && !process.env.SESSION_SECRET) {
   }));
 }
 const databaseReady = initializeDatabase();
+// The production health endpoint must stay available when DATABASE_URL has not
+// been added yet. Keep the rejected readiness promise handled globally while
+// database-dependent requests still receive the failure through their handler.
+databaseReady.catch(() => {});
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api/")) return next();
   // Keep diagnostic and provider-discovery endpoints available when the database
