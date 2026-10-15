@@ -65,7 +65,7 @@ Use model IDs enabled for your provider account. Availability and names can chan
 
    | Variable | Value |
    | --- | --- |
-   | `DATABASE_URL` | Pooled PostgreSQL connection string from your database host |
+   | `DATABASE_URL` | Pooled PostgreSQL connection string from your database host. Vercel's Neon integration can instead provide `DATABASE_POSTGRES_URL`. |
    | `DATABASE_SSL` | `true` when required by the database host |
    | `DATABASE_POOL_SIZE` | `1` for serverless function instances |
    | `SESSION_SECRET` | Long, random secret; use Vercel's Generate option |

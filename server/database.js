@@ -1,12 +1,16 @@
 import pg from "pg";
 
 const { Pool } = pg;
+// Vercel's Neon integration exposes its pooled connection string as
+// DATABASE_POSTGRES_URL when using the DATABASE prefix. Keep DATABASE_URL as
+// the standard override for local development and other database providers.
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_POSTGRES_URL || process.env.POSTGRES_URL;
 const ssl = process.env.DATABASE_SSL === "true"
   ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" }
   : undefined;
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   ssl,
   max: Number(process.env.DATABASE_POOL_SIZE) || 10,
   idleTimeoutMillis: 30_000,
@@ -14,7 +18,7 @@ export const pool = new Pool({
 });
 
 export async function initializeDatabase() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
+  if (!databaseUrl) throw new Error("DATABASE_URL or DATABASE_POSTGRES_URL is required.");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
